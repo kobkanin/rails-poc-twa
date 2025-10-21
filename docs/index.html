@@ -10,74 +10,36 @@
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
 
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
-        authDomain: "onerev-dev.firebaseapp.com",
-        projectId: "onerev-dev",
-        messagingSenderId: "782528078431",
-        appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
-      };
+    <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#0ea5e9" />
 
-      firebase.initializeApp(firebaseConfig);
-
-      const messaging = firebase.messaging();
-
-      // register service worker
-      navigator.serviceWorker
-        .register("/firebase-messaging-sw.js")
-        .then(() => Notification.requestPermission())
-        .then((permission) => {
-          if (permission === "granted") {
-            messaging
-              .getToken({
-                vapidKey:
-                  "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg",
-              })
-              .then((token) => console.log("Token:", token));
-          }
-        });
-    </script>
-
-    <script>
-      messaging.onMessage((payload) => {
-        console.log("Foreground message:", payload);
-        // จะโชว์เป็น in-app toast ก็ได้
-        const { title, body } = payload.notification || {};
-        if (title || body) {
-          new Notification(title || "Message", { body: body || "" });
-        }
-      });
-    </script>
-
-    <!-- Always-on Eruda Debug Console -->
+    <!-- Always-on Eruda Debug Console (พร้อมกันพลาด) -->
     <script src="https://cdn.jsdelivr.net/npm/eruda@3/dist/eruda.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda-dom@2/eruda-dom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda-features@2/eruda-features.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda-network@2/eruda-network.min.js"></script>
     <script>
-      eruda.init();
-      eruda.add(erudaDom);
-      eruda.add(erudaFeatures);
-      eruda.add(erudaNetwork);
-
-      // ตั้งค่าทั่วไป (ลากได้, เปิดทันที)
-      eruda.position({ x: 10, y: 10 });
-      eruda.show();
-
-      // toggle ด้วยปุ่ม "e"
-      window.addEventListener("keydown", (e) => {
-        if (e.key.toLowerCase() === "e") {
-          eruda._isShow ? eruda.hide() : eruda.show();
+      (function initEruda() {
+        try {
+          if (!window.eruda) return;
+          eruda.init();
+          if (window.erudaDom) eruda.add(erudaDom);
+          if (window.erudaFeatures) eruda.add(erudaFeatures);
+          if (window.erudaNetwork) eruda.add(erudaNetwork);
+          eruda.position({ x: 10, y: 10 });
+          eruda.show();
+          window.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() === "e") {
+              eruda._isShow ? eruda.hide() : eruda.show();
+            }
+          });
+          console.log("Eruda loaded ✅ (กด 'e' เพื่อซ่อน/เปิด)");
+        } catch (e) {
+          console.log("Eruda init failed ❌", e);
         }
-      });
-
-      console.log("Eruda loaded ✅  (กด 'e' เพื่อซ่อน/เปิด)");
+      })();
     </script>
-
-    <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#0ea5e9" />
 
     <!-- ตัวอย่างสไตล์เล็กน้อย -->
     <style>
@@ -112,7 +74,8 @@
         width: 64px;
         height: 64px;
       }
-      a.btn {
+      a.btn,
+      button.btn {
         display: inline-block;
         margin-top: 12px;
         padding: 10px 14px;
@@ -120,11 +83,32 @@
         background: #0ea5e9;
         color: #fff;
         text-decoration: none;
+        border: none;
+        cursor: pointer;
       }
       code {
         background: #f3f3f3;
         padding: 2px 6px;
         border-radius: 6px;
+      }
+      .token-box {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px dashed #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        word-break: break-all;
+      }
+      .token-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .muted {
+        color: #64748b;
+        font-size: 12px;
       }
     </style>
   </head>
@@ -133,7 +117,7 @@
       <span class="badge">Static PWA on GitHub Pages</span>
       <h1>Rails POC — Static Frontend</h1>
       <div class="row">
-        <img class="icon" src="./icon-192.png alt="icon" />
+        <img class="icon" src="./icon-192.png" alt="icon" />
         <p>
           หน้านี้รันบน GitHub Pages (สแตติก) — ถ้าต้องการ Rails backend จริง
           ให้โฮสต์ที่ Render/Fly/ฯลฯ แล้วเรียก API จากหน้าเว็บนี้
@@ -150,10 +134,139 @@
         เปิดใน Chrome แล้วลอง “Add to Home screen” ได้เลย (เดสก์ท็อปจะเห็น
         Install app)
       </p>
+
+      <h2>FCM</h2>
+      <button id="btnToken" class="btn">Show FCM Token</button>
+      <div id="tokenBox" class="token-box" hidden>
+        <div class="muted">FCM Token:</div>
+        <div id="tokenText">-</div>
+        <div class="token-actions">
+          <button id="btnCopy" class="btn" style="background: #16a34a">
+            Copy
+          </button>
+          <button id="btnHide" class="btn" style="background: #475569">
+            Hide
+          </button>
+        </div>
+      </div>
     </div>
 
+    <!-- แอป + FCM -->
     <script>
-      // สมัคร service worker (จำเป็นต้องเสิร์ฟผ่าน HTTPS: GitHub Pages OK)
+      // --- Firebase init ---
+      const firebaseConfig = {
+        apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
+        authDomain: "onerev-dev.firebaseapp.com",
+        projectId: "onerev-dev",
+        messagingSenderId: "782528078431",
+        appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
+      };
+      firebase.initializeApp(firebaseConfig);
+      const messaging = firebase.messaging();
+
+      // --- util: ขอสิทธิ์แจ้งเตือนแบบแน่นอน ---
+      async function ensureNotificationPermission() {
+        if (!("Notification" in window)) {
+          throw new Error("Browser ไม่รองรับ Notification API");
+        }
+        let perm = Notification.permission;
+        if (perm === "default") {
+          perm = await Notification.requestPermission();
+        }
+        if (perm !== "granted") {
+          throw new Error(
+            "ผู้ใช้ยังไม่ให้สิทธิ์แจ้งเตือน (permission: " + perm + ")"
+          );
+        }
+      }
+
+      // --- สมัคร Service Worker (PWA + FCM) ด้วย path แบบ relative ---
+      async function registerSwForFcm() {
+        if (!("serviceWorker" in navigator)) {
+          throw new Error("Browser ไม่รองรับ Service Worker");
+        }
+
+        // NOTE:
+        // - service-worker สำหรับแคช PWA
+        // - firebase-messaging-sw สำหรับ FCM (ต้องอยู่ root เดียวกับหน้า)
+        const [pwaReg, fcmReg] = await Promise.all([
+          navigator.serviceWorker.register("./service-worker.js"),
+          navigator.serviceWorker.register("./firebase-messaging-sw.js"),
+        ]);
+
+        // ปักให้ FCM ใช้ SW ตัวที่เราลงทะเบียน
+        messaging.useServiceWorker(fcmReg);
+        return fcmReg;
+      }
+
+      // --- ดึง FCM Token ---
+      async function fetchFcmToken() {
+        // ใส่ VAPID Key ของ Web Push
+        const vapidKey =
+          "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg";
+        return await messaging.getToken({ vapidKey });
+      }
+
+      // --- Foreground message handler ---
+      messaging.onMessage((payload) => {
+        console.log("Foreground message:", payload);
+        const { title, body } = payload.notification || {};
+        if (title || body) {
+          try {
+            new Notification(title || "Message", { body: body || "" });
+          } catch (_) {
+            // บางแพลตฟอร์ม disallow ใน foreground; แค่ log ไว้
+            console.log("Notification show skipped.");
+          }
+        }
+      });
+
+      // --- UI: ปุ่ม Show Token ---
+      (function wireTokenButton() {
+        const btn = document.getElementById("btnToken");
+        const box = document.getElementById("tokenBox");
+        const text = document.getElementById("tokenText");
+        const btnCopy = document.getElementById("btnCopy");
+        const btnHide = document.getElementById("btnHide");
+
+        btn.addEventListener("click", async () => {
+          try {
+            btn.disabled = true;
+            btn.textContent = "Loading...";
+            await ensureNotificationPermission();
+            await registerSwForFcm();
+            const token = await fetchFcmToken();
+            console.log("FCM Token:", token);
+            text.textContent = token || "(no token)";
+            box.hidden = false;
+            btn.textContent = "Show FCM Token";
+          } catch (e) {
+            console.error("Get token failed:", e);
+            alert("Get token failed: " + e.message);
+            btn.textContent = "Show FCM Token";
+          } finally {
+            btn.disabled = false;
+          }
+        });
+
+        btnCopy.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(text.textContent.trim());
+            btnCopy.textContent = "Copied!";
+            setTimeout(() => (btnCopy.textContent = "Copy"), 1200);
+          } catch {
+            alert("คัดลอกไม่สำเร็จ");
+          }
+        });
+
+        btnHide.addEventListener("click", () => {
+          box.hidden = true;
+        });
+      })();
+    </script>
+
+    <!-- สมัคร service worker หลักของ PWA ด้วย path แบบ relative -->
+    <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("./service-worker.js");

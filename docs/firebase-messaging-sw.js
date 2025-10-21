@@ -1,4 +1,5 @@
 /* firebase-messaging-sw.js */
+/* eslint-disable no-undef */
 importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"
 );
@@ -6,7 +7,7 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"
 );
 
-// 🔧 Firebase config ของคุณหนูกบ
+// Init Firebase ของโปรเจกต์คุณหนูกบ
 firebase.initializeApp({
   apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
   authDomain: "onerev-dev.firebaseapp.com",
@@ -17,45 +18,16 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// base URL สำหรับ GitHub Pages (ใช้ self.registration.scope)
-const BASE = self.registration.scope;
+// คำนวณ BASE จาก scope (สำคัญมากบน GitHub Pages)
+const BASE = self.registration.scope; // เช่น https://kobkanin.github.io/rails-poc-twa/
 const iconUrl = new URL("icon-192.png", BASE).toString();
 
-// รับข้อความเบื้องหลัง
+// รับ background messages
 messaging.onBackgroundMessage((payload) => {
-  console.log("[firebase-messaging-sw.js] Background message", payload);
-  const title = payload.notification?.title || "Notification";
-  const options = {
-    body: payload.notification?.body || "",
+  const { title, body } = payload.notification || {};
+  self.registration.showNotification(title || "Message", {
+    body,
     icon: iconUrl,
-    data: {
-      ...payload.data,
-      click_action: payload.data?.click_action || BASE,
-    },
-  };
-  self.registration.showNotification(title, options);
-});
-
-// เมื่อผู้ใช้คลิกแจ้งเตือน
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const targetUrl = event.notification?.data?.click_action || BASE;
-  event.waitUntil(
-    clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((list) => {
-        for (const client of list) {
-          if (client.url.startsWith(targetUrl) && "focus" in client) {
-            return client.focus();
-          }
-        }
-        return clients.openWindow(targetUrl);
-      })
-  );
-});
-
-// ให้ SW ตัวใหม่ takeover ทันที
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+    badge: iconUrl,
+  });
 });

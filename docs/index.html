@@ -6,8 +6,15 @@
     <title>Rails POC (Static PWA)</title>
 
     <!-- PWA -->
-    <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+
+    <meta
+      name="description"
+      content="Rails POC on GitHub Pages as a Static PWA"
+    />
 
     <style>
       body {
@@ -94,9 +101,7 @@
       </div>
 
       <a class="btn" href="./" rel="noopener">Reload</a>
-      <p>
-        Basepath ของเว็บนี้คือ <code>/rails-poc-twa/</code> เพราะเป็น repo page
-      </p>
+      <p>Basepath ของเว็บนี้คือ <code id="basepath">/</code> (auto detect)</p>
 
       <h2>FCM</h2>
       <button id="btnToken" class="btn">Show FCM Token</button>
@@ -121,9 +126,30 @@
         getMessaging,
         getToken,
         onMessage,
+        isSupported,
       } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-      // 🔧 Firebase Config ของคุณหนูกบ
+      // คำนวณ basePath สำหรับ GitHub Pages (repo page)
+      const parts = location.pathname.split("/").filter(Boolean);
+      const basePath = parts.length ? `/${parts[0]}/` : "/";
+      document.getElementById("basepath").textContent = basePath;
+
+      // ลงทะเบียน App Service Worker (แคช + Offline)
+      (async function registerAppSW() {
+        if (!("serviceWorker" in navigator)) return;
+        const swUrl = `${basePath}sw.js?v=${Date.now()}`;
+        try {
+          const reg = await navigator.serviceWorker.register(swUrl, {
+            scope: basePath,
+          });
+          await navigator.serviceWorker.ready;
+          console.log("[AppSW] registered:", reg.scope);
+        } catch (e) {
+          console.warn("[AppSW] register failed:", e);
+        }
+      })();
+
+      // Firebase Config ของคุณหนูกบ
       const app = initializeApp({
         apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
         authDomain: "onerev-dev.firebaseapp.com",
@@ -131,12 +157,15 @@
         messagingSenderId: "782528078431",
         appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
       });
-      const messaging = getMessaging(app);
-      console.log(messaging);
 
-      // คำนวณ basePath สำหรับ GitHub Pages
-      const parts = location.pathname.split("/").filter(Boolean);
-      const basePath = parts.length ? `/${parts[0]}/` : "/";
+      let messaging;
+      (async () => {
+        if (await isSupported()) {
+          messaging = getMessaging(app);
+        } else {
+          console.warn("Firebase Messaging ไม่รองรับบนเบราว์เซอร์นี้");
+        }
+      })();
 
       async function ensurePermission() {
         if (!("Notification" in window))
@@ -148,7 +177,6 @@
       }
 
       async function registerFcmSW() {
-        console.log("registerFcmSW");
         const secure =
           location.protocol === "https:" ||
           ["localhost", "127.0.0.1"].includes(location.hostname);
@@ -159,7 +187,7 @@
           { scope: basePath }
         );
         await navigator.serviceWorker.ready;
-        console.log("registerFcmSW :: return ::" + reg);
+        console.log("[FCMSW] registered:", reg.scope);
         return reg;
       }
 
@@ -175,11 +203,15 @@
         return token;
       }
 
-      onMessage(messaging, (payload) => {
-        console.log("Foreground message:", payload);
-        const { title, body } = payload.notification || {};
-        if (title || body) new Notification(title || "Message", { body });
-      });
+      // รับข้อความขณะ foreground
+      (function fgMessage() {
+        if (!messaging) return;
+        onMessage(messaging, (payload) => {
+          console.log("Foreground message:", payload);
+          const { title, body } = payload.notification || {};
+          if (title || body) new Notification(title || "Message", { body });
+        });
+      })();
 
       // ปุ่มแสดง Token
       (function wireButton() {
@@ -190,15 +222,11 @@
         const btnHide = document.getElementById("btnHide");
 
         btn.addEventListener("click", async () => {
-          console.log("click button");
           try {
             btn.disabled = true;
             btn.textContent = "Loading...";
             await ensurePermission();
             const reg = await registerFcmSW();
-            console.log("reg");
-            console.log(reg);
-
             const token = await getFcmTokenWith(reg);
             console.log("✅ FCM Token:", token);
             text.textContent = token;
@@ -224,12 +252,11 @@
 
         btnHide.addEventListener("click", () => (box.hidden = true));
       })();
-    </script>
 
-    <!-- Debug ด้วย eruda -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>
-      eruda.init();
+      // Debug ด้วย eruda
+      import("https://cdn.jsdelivr.net/npm/eruda").then((m) =>
+        m.default.init()
+      );
     </script>
   </body>
 </html>

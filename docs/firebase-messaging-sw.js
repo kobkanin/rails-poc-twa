@@ -7,15 +7,18 @@ importScripts(
 );
 
 // 🔧 Firebase config ของคุณหนูกบ
-firebase.initializeApp({
+const firebaseConfig = {
   apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
   authDomain: "onerev-dev.firebaseapp.com",
   projectId: "onerev-dev",
+  storageBucket: "onerev-dev.firebasestorage.app",
   messagingSenderId: "782528078431",
-  appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
-});
+  appId: "1:782528078431:android:ccd3e92370c8e316c531ea",
+};
 
-const messaging = firebase.messaging();
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const messaging = app.messaging();
 
 // base URL สำหรับ GitHub Pages (ใช้ self.registration.scope)
 const BASE = self.registration.scope;

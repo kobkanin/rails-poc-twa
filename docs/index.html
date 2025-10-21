@@ -124,13 +124,20 @@
       } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
       // 🔧 Firebase Config ของคุณหนูกบ
-      const app = initializeApp({
-        apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
+      const firebaseConfig = {
+        apiKey: "AIzaSyBaVJr5QoJL-G89P-HPufdOCxDxzzLxoik",
         authDomain: "onerev-dev.firebaseapp.com",
         projectId: "onerev-dev",
+        storageBucket: "onerev-dev.firebasestorage.app",
         messagingSenderId: "782528078431",
-        appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
-      });
+        appId: "1:782528078431:web:a7238083aaf856cdc531ea",
+        measurementId: "G-W92TRKCT7C",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const analytics = getAnalytics(app);
+
       const messaging = getMessaging(app);
       console.log(messaging);
 

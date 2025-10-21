@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rails POC (Static PWA)</title>
 
-    <!-- PWA Config -->
+    <!-- PWA -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
 
@@ -114,7 +114,7 @@
       </div>
     </div>
 
-    <!-- ==== Firebase Modular SDK ==== -->
+    <!-- === Firebase (Modular SDK) === -->
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
       import {
@@ -123,7 +123,7 @@
         onMessage,
       } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-      // ✅ Init Firebase
+      // 🔧 Firebase Config ของคุณหนูกบ
       const app = initializeApp({
         apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
         authDomain: "onerev-dev.firebaseapp.com",
@@ -131,14 +131,12 @@
         messagingSenderId: "782528078431",
         appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
       });
-
       const messaging = getMessaging(app);
 
-      // ✅ คำนวณ basePath สำหรับ GitHub Pages repo (/rails-poc-twa/)
+      // คำนวณ basePath สำหรับ GitHub Pages
       const parts = location.pathname.split("/").filter(Boolean);
       const basePath = parts.length ? `/${parts[0]}/` : "/";
 
-      // ✅ ขอ permission
       async function ensurePermission() {
         if (!("Notification" in window))
           throw new Error("Browser ไม่รองรับ Notification API");
@@ -148,22 +146,20 @@
           throw new Error("ยังไม่ได้ให้สิทธิ์แจ้งเตือน (" + p + ")");
       }
 
-      // ✅ สมัคร service worker พร้อม scope ที่ถูกต้อง
       async function registerFcmSW() {
         const secure =
           location.protocol === "https:" ||
           ["localhost", "127.0.0.1"].includes(location.hostname);
         if (!secure) throw new Error("ต้องรันผ่าน HTTPS หรือ localhost");
 
-        const registration = await navigator.serviceWorker.register(
+        const reg = await navigator.serviceWorker.register(
           `${basePath}firebase-messaging-sw.js?v=${Date.now()}`,
           { scope: basePath }
         );
         await navigator.serviceWorker.ready;
-        return registration;
+        return reg;
       }
 
-      // ✅ ดึง FCM token โดยส่ง serviceWorkerRegistration
       async function getFcmTokenWith(registration) {
         const vapidKey =
           "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg";
@@ -176,18 +172,13 @@
         return token;
       }
 
-      // ✅ ข้อความขณะ foreground
       onMessage(messaging, (payload) => {
         console.log("Foreground message:", payload);
         const { title, body } = payload.notification || {};
-        if (title || body) {
-          try {
-            new Notification(title || "Message", { body: body || "" });
-          } catch {}
-        }
+        if (title || body) new Notification(title || "Message", { body });
       });
 
-      // ✅ ปุ่มแสดง token
+      // ปุ่มแสดง Token
       (function wireButton() {
         const btn = document.getElementById("btnToken");
         const box = document.getElementById("tokenBox");
@@ -209,8 +200,8 @@
             console.error("❌ Get token failed:", e);
             alert("Get token failed: " + e.message);
           } finally {
-            btn.textContent = "Show FCM Token";
             btn.disabled = false;
+            btn.textContent = "Show FCM Token";
           }
         });
 
@@ -228,7 +219,7 @@
       })();
     </script>
 
-    <!-- 🧰 debug ด้วย eruda -->
+    <!-- Debug ด้วย eruda -->
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>
       eruda.init();

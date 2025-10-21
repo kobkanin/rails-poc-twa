@@ -6,7 +6,7 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"
 );
 
-/** 1) Init Firebase ของโปรเจกต์ */
+// 🔧 Firebase config ของคุณหนูกบ
 firebase.initializeApp({
   apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
   authDomain: "onerev-dev.firebaseapp.com",
@@ -17,59 +17,44 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/** 2) คำนวณ base URL ตาม scope ของ SW (รองรับ GitHub Pages /rails-poc-twa/) */
-const BASE = self.registration.scope; // e.g. https://kobkanin.github.io/rails-poc-twa/
-const toUrl = (p) => new URL(p, BASE).toString();
-const ICON_URL = toUrl("icon-192.png");
-const HOME_URL = toUrl("./");
+// base URL สำหรับ GitHub Pages (ใช้ self.registration.scope)
+const BASE = self.registration.scope;
+const iconUrl = new URL("icon-192.png", BASE).toString();
 
-/** 3) รับข้อความตอนเบื้องหลัง (background) */
+// รับข้อความเบื้องหลัง
 messaging.onBackgroundMessage((payload) => {
-  // รองรับทั้งกรณีส่ง notification-object และ data-only (title/body อยู่ใน data)
-  const n = payload.notification || {};
-  const d = payload.data || {};
-
-  const title = n.title || d.title || "Notification";
-  const body = n.body || d.body || "";
-
-  const clickAction = d.click_action || n.click_action || HOME_URL;
-
+  console.log("[firebase-messaging-sw.js] Background message", payload);
+  const title = payload.notification?.title || "Notification";
   const options = {
-    body,
-    icon: ICON_URL,
+    body: payload.notification?.body || "",
+    icon: iconUrl,
     data: {
-      ...d,
-      click_action: clickAction,
+      ...payload.data,
+      click_action: payload.data?.click_action || BASE,
     },
   };
-
   self.registration.showNotification(title, options);
 });
 
-/** 4) เปิดหน้า/โฟกัสแท็บเมื่อผู้ใช้คลิกแจ้งเตือน */
+// เมื่อผู้ใช้คลิกแจ้งเตือน
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-
-  const targetUrl = event.notification?.data?.click_action || HOME_URL;
-
+  const targetUrl = event.notification?.data?.click_action || BASE;
   event.waitUntil(
-    (async () => {
-      const allClients = await clients.matchAll({
-        type: "window",
-        includeUncontrolled: true,
-      });
-      for (const client of allClients) {
-        // ใช้ startsWith เพื่อครอบกรณีมี query/hash
-        if (client.url.startsWith(targetUrl) && "focus" in client) {
-          return client.focus();
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((list) => {
+        for (const client of list) {
+          if (client.url.startsWith(targetUrl) && "focus" in client) {
+            return client.focus();
+          }
         }
-      }
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })()
+        return clients.openWindow(targetUrl);
+      })
   );
 });
 
-/** 5) ให้ SW เวอร์ชันใหม่ takeover ไว */
+// ให้ SW ตัวใหม่ takeover ทันที
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());

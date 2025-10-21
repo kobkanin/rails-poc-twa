@@ -6,6 +6,109 @@
 
     <title>Rails POC (Static PWA)</title>
 
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
+        authDomain: "onerev-dev.firebaseapp.com",
+        projectId: "onerev-dev",
+        messagingSenderId: "782528078431",
+        appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
+      };
+
+      firebase.initializeApp(firebaseConfig);
+
+      const messaging = firebase.messaging();
+
+      // register service worker
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .then(() => Notification.requestPermission())
+        .then((permission) => {
+          if (permission === "granted") {
+            messaging
+              .getToken({
+                vapidKey:
+                  "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg",
+              })
+              .then((token) => console.log("Token:", token));
+          }
+        });
+    </script>
+
+    <script>
+      messaging.onMessage((payload) => {
+        console.log("Foreground message:", payload);
+        // จะโชว์เป็น in-app toast ก็ได้
+        const { title, body } = payload.notification || {};
+        if (title || body) {
+          new Notification(title || "Message", { body: body || "" });
+        }
+      });
+    </script>
+
+    <script>
+      (function () {
+        const wantDebug =
+          location.search.includes("debug") ||
+          location.hash.includes("debug") ||
+          localStorage.getItem("eruda") === "true" ||
+          location.hostname === "localhost";
+
+        if (!wantDebug) return;
+
+        function load(src) {
+          return new Promise((res, rej) => {
+            const s = document.createElement("script");
+            s.src = src;
+            s.async = true;
+            s.onload = () => res();
+            s.onerror = rej;
+            document.head.appendChild(s);
+          });
+        }
+
+        (async () => {
+          // core
+          await load("https://cdn.jsdelivr.net/npm/eruda@3/dist/eruda.min.js");
+
+          // (ตัวเลือก) ปลั๊กอินเสริมที่มีประโยชน์มาก
+          await load(
+            "https://cdn.jsdelivr.net/npm/eruda-dom@2/eruda-dom.min.js"
+          );
+          await load(
+            "https://cdn.jsdelivr.net/npm/eruda-features@2/eruda-features.min.js"
+          );
+          await load(
+            "https://cdn.jsdelivr.net/npm/eruda-network@2/eruda-network.min.js"
+          );
+
+          eruda.init();
+          eruda.add(erudaDom);
+          eruda.add(erudaFeatures);
+          eruda.add(erudaNetwork);
+
+          // ตั้งตำแหน่งและพฤติกรรม
+          eruda.position({ x: 10, y: 10 }); // ลากย้ายได้
+          // eruda.show(); // จะให้เปิดขึ้นมาเลยก็ได้
+
+          // กดปุ่ม "e" เพื่อ toggle แผง eruda
+          window.addEventListener("keydown", (e) => {
+            if (e.key.toLowerCase() === "e") {
+              eruda._isShow ? eruda.hide() : eruda.show();
+            }
+          });
+
+          console.log(
+            "Eruda ready. กด 'e' เพื่อเปิด/ปิด หรือใช้ localStorage.setItem('eruda','true')"
+          );
+        })();
+      })();
+    </script>
+
     <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
@@ -64,7 +167,7 @@
       <span class="badge">Static PWA on GitHub Pages</span>
       <h1>Rails POC — Static Frontend</h1>
       <div class="row">
-        <img class="icon" src="./icon-192.png" alt="icon" />
+        <img class="icon" src="./icon-192.png alt="icon" />
         <p>
           หน้านี้รันบน GitHub Pages (สแตติก) — ถ้าต้องการ Rails backend จริง
           ให้โฮสต์ที่ Render/Fly/ฯลฯ แล้วเรียก API จากหน้าเว็บนี้

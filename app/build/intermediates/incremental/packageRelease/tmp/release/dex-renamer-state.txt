@@ -1,0 +1,4 @@
+#Tue Oct 21 14:20:12 ICT 2025
+base.0=/Users/khaninpradidtanon/Documents/workshop/poc-rail-pwa/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
+renamed.0=classes.dex
+path.0=classes.dex

@@ -50,63 +50,29 @@
       });
     </script>
 
+    <!-- Always-on Eruda Debug Console -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda@3/dist/eruda.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda-dom@2/eruda-dom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda-features@2/eruda-features.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/eruda-network@2/eruda-network.min.js"></script>
     <script>
-      (function () {
-        const wantDebug =
-          location.search.includes("debug") ||
-          location.hash.includes("debug") ||
-          localStorage.getItem("eruda") === "true" ||
-          location.hostname === "localhost";
+      eruda.init();
+      eruda.add(erudaDom);
+      eruda.add(erudaFeatures);
+      eruda.add(erudaNetwork);
 
-        if (!wantDebug) return;
+      // ตั้งค่าทั่วไป (ลากได้, เปิดทันที)
+      eruda.position({ x: 10, y: 10 });
+      eruda.show();
 
-        function load(src) {
-          return new Promise((res, rej) => {
-            const s = document.createElement("script");
-            s.src = src;
-            s.async = true;
-            s.onload = () => res();
-            s.onerror = rej;
-            document.head.appendChild(s);
-          });
+      // toggle ด้วยปุ่ม "e"
+      window.addEventListener("keydown", (e) => {
+        if (e.key.toLowerCase() === "e") {
+          eruda._isShow ? eruda.hide() : eruda.show();
         }
+      });
 
-        (async () => {
-          // core
-          await load("https://cdn.jsdelivr.net/npm/eruda@3/dist/eruda.min.js");
-
-          // (ตัวเลือก) ปลั๊กอินเสริมที่มีประโยชน์มาก
-          await load(
-            "https://cdn.jsdelivr.net/npm/eruda-dom@2/eruda-dom.min.js"
-          );
-          await load(
-            "https://cdn.jsdelivr.net/npm/eruda-features@2/eruda-features.min.js"
-          );
-          await load(
-            "https://cdn.jsdelivr.net/npm/eruda-network@2/eruda-network.min.js"
-          );
-
-          eruda.init();
-          eruda.add(erudaDom);
-          eruda.add(erudaFeatures);
-          eruda.add(erudaNetwork);
-
-          // ตั้งตำแหน่งและพฤติกรรม
-          eruda.position({ x: 10, y: 10 }); // ลากย้ายได้
-          // eruda.show(); // จะให้เปิดขึ้นมาเลยก็ได้
-
-          // กดปุ่ม "e" เพื่อ toggle แผง eruda
-          window.addEventListener("keydown", (e) => {
-            if (e.key.toLowerCase() === "e") {
-              eruda._isShow ? eruda.hide() : eruda.show();
-            }
-          });
-
-          console.log(
-            "Eruda ready. กด 'e' เพื่อเปิด/ปิด หรือใช้ localStorage.setItem('eruda','true')"
-          );
-        })();
-      })();
+      console.log("Eruda loaded ✅  (กด 'e' เพื่อซ่อน/เปิด)");
     </script>
 
     <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->

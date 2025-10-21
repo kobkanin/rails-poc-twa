@@ -14,33 +14,6 @@
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
 
-    <!-- Always-on Eruda Debug Console (พร้อมกันพลาด) -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda@3/dist/eruda.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda-dom@2/eruda-dom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda-features@2/eruda-features.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda-network@2/eruda-network.min.js"></script>
-    <script>
-      (function initEruda() {
-        try {
-          if (!window.eruda) return;
-          eruda.init();
-          if (window.erudaDom) eruda.add(erudaDom);
-          if (window.erudaFeatures) eruda.add(erudaFeatures);
-          if (window.erudaNetwork) eruda.add(erudaNetwork);
-          eruda.position({ x: 10, y: 10 });
-          eruda.show();
-          window.addEventListener("keydown", (e) => {
-            if (e.key.toLowerCase() === "e") {
-              eruda._isShow ? eruda.hide() : eruda.show();
-            }
-          });
-          console.log("Eruda loaded ✅ (กด 'e' เพื่อซ่อน/เปิด)");
-        } catch (e) {
-          console.log("Eruda init failed ❌", e);
-        }
-      })();
-    </script>
-
     <!-- ตัวอย่างสไตล์เล็กน้อย -->
     <style>
       body {

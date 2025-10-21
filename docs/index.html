@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
     <title>Rails POC (Static PWA)</title>
 
     <!-- Firebase -->
@@ -14,7 +13,6 @@
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
 
-    <!-- ตัวอย่างสไตล์เล็กน้อย -->
     <style>
       body {
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
@@ -85,10 +83,12 @@
       }
     </style>
   </head>
+
   <body>
     <div class="wrap">
       <span class="badge">Static PWA on GitHub Pages</span>
-      <h1>ทดสอบ 888</h1>
+      <h1>Rails POC — Static Frontend</h1>
+
       <div class="row">
         <img class="icon" src="./icon-192.png" alt="icon" />
         <p>
@@ -100,12 +100,6 @@
       <a class="btn" href="./" rel="noopener">Reload</a>
       <p>
         Basepath ของเว็บนี้คือ <code>/rails-poc-twa/</code> เพราะเป็น repo page
-      </p>
-
-      <h2>ทดสอบติดตั้งเป็น PWA</h2>
-      <p>
-        เปิดใน Chrome แล้วลอง “Add to Home screen” ได้เลย (เดสก์ท็อปจะเห็น
-        Install app)
       </p>
 
       <h2>FCM</h2>
@@ -124,9 +118,17 @@
       </div>
     </div>
 
-    <!-- แอป + FCM -->
     <script>
-      // --- Firebase init ---
+      // ✅ ป้องกันรันจาก file://
+      function isSecureContextForSW() {
+        return (
+          location.protocol === "https:" ||
+          location.hostname === "localhost" ||
+          location.hostname === "127.0.0.1"
+        );
+      }
+
+      // ✅ Firebase init
       const firebaseConfig = {
         apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
         authDomain: "onerev-dev.firebaseapp.com",
@@ -137,64 +139,59 @@
       firebase.initializeApp(firebaseConfig);
       const messaging = firebase.messaging();
 
-      // --- util: ขอสิทธิ์แจ้งเตือนแบบแน่นอน ---
       async function ensureNotificationPermission() {
         if (!("Notification" in window)) {
           throw new Error("Browser ไม่รองรับ Notification API");
         }
         let perm = Notification.permission;
-        if (perm === "default") {
-          perm = await Notification.requestPermission();
-        }
+        if (perm === "default") perm = await Notification.requestPermission();
         if (perm !== "granted") {
           throw new Error(
-            "ผู้ใช้ยังไม่ให้สิทธิ์แจ้งเตือน (permission: " + perm + ")"
+            "ยังไม่ได้ให้สิทธิ์แจ้งเตือน (permission: " + perm + ")"
           );
         }
       }
 
-      // --- สมัคร Service Worker (PWA + FCM) ด้วย path แบบ relative ---
       async function registerSwForFcm() {
         if (!("serviceWorker" in navigator)) {
           throw new Error("Browser ไม่รองรับ Service Worker");
         }
+        if (!isSecureContextForSW()) {
+          throw new Error("ต้องรันผ่าน HTTPS หรือ http://localhost");
+        }
 
-        // NOTE:
-        // - service-worker สำหรับแคช PWA
-        // - firebase-messaging-sw สำหรับ FCM (ต้องอยู่ root เดียวกับหน้า)
+        // ✅ ใช้ path relative (รองรับ basepath /rails-poc-twa/)
         const [pwaReg, fcmReg] = await Promise.all([
-          navigator.serviceWorker.register("./service-worker.js"),
-          navigator.serviceWorker.register("./firebase-messaging-sw.js"),
+          navigator.serviceWorker.register("./service-worker.js", {
+            scope: "./",
+          }),
+          navigator.serviceWorker.register("./firebase-messaging-sw.js", {
+            scope: "./",
+          }),
         ]);
 
-        // ปักให้ FCM ใช้ SW ตัวที่เราลงทะเบียน
-        messaging.useServiceWorker(fcmReg);
+        if (messaging.useServiceWorker) messaging.useServiceWorker(fcmReg);
+        await navigator.serviceWorker.ready;
         return fcmReg;
       }
 
-      // --- ดึง FCM Token ---
       async function fetchFcmToken() {
-        // ใส่ VAPID Key ของ Web Push
         const vapidKey =
           "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg";
         return await messaging.getToken({ vapidKey });
       }
 
-      // --- Foreground message handler ---
       messaging.onMessage((payload) => {
         console.log("Foreground message:", payload);
         const { title, body } = payload.notification || {};
         if (title || body) {
           try {
             new Notification(title || "Message", { body: body || "" });
-          } catch (_) {
-            // บางแพลตฟอร์ม disallow ใน foreground; แค่ log ไว้
-            console.log("Notification show skipped.");
-          }
+          } catch {}
         }
       });
 
-      // --- UI: ปุ่ม Show Token ---
+      // ✅ ปุ่ม FCM
       (function wireTokenButton() {
         const btn = document.getElementById("btnToken");
         const box = document.getElementById("tokenBox");
@@ -212,12 +209,11 @@
             console.log("FCM Token:", token);
             text.textContent = token || "(no token)";
             box.hidden = false;
-            btn.textContent = "Show FCM Token";
           } catch (e) {
             console.error("Get token failed:", e);
             alert("Get token failed: " + e.message);
-            btn.textContent = "Show FCM Token";
           } finally {
+            btn.textContent = "Show FCM Token";
             btn.disabled = false;
           }
         });
@@ -232,19 +228,8 @@
           }
         });
 
-        btnHide.addEventListener("click", () => {
-          box.hidden = true;
-        });
+        btnHide.addEventListener("click", () => (box.hidden = true));
       })();
-    </script>
-
-    <!-- สมัคร service worker หลักของ PWA ด้วย path แบบ relative -->
-    <script>
-      if ("serviceWorker" in navigator) {
-        window.addEventListener("load", () => {
-          navigator.serviceWorker.register("./service-worker.js");
-        });
-      }
     </script>
   </body>
 </html>

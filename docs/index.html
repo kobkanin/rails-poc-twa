@@ -132,6 +132,7 @@
         appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
       });
       const messaging = getMessaging(app);
+      console.log(messaging);
 
       // คำนวณ basePath สำหรับ GitHub Pages
       const parts = location.pathname.split("/").filter(Boolean);
@@ -147,6 +148,7 @@
       }
 
       async function registerFcmSW() {
+        console.log("registerFcmSW");
         const secure =
           location.protocol === "https:" ||
           ["localhost", "127.0.0.1"].includes(location.hostname);
@@ -157,6 +159,7 @@
           { scope: basePath }
         );
         await navigator.serviceWorker.ready;
+        console.log("registerFcmSW :: return ::" + reg);
         return reg;
       }
 
@@ -187,11 +190,15 @@
         const btnHide = document.getElementById("btnHide");
 
         btn.addEventListener("click", async () => {
+          console.log("click button");
           try {
             btn.disabled = true;
             btn.textContent = "Loading...";
             await ensurePermission();
             const reg = await registerFcmSW();
+            console.log("reg");
+            console.log(reg);
+
             const token = await getFcmTokenWith(reg);
             console.log("✅ FCM Token:", token);
             text.textContent = token;

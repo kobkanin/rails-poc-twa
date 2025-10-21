@@ -1,4 +1,4 @@
-/* public/firebase-messaging-sw.js */
+/* firebase-messaging-sw.js */
 importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"
 );
@@ -6,7 +6,7 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"
 );
 
-// ใส่ config ของโปรเจกต์ Firebase คุณหนูกบ
+// === 1) Init Firebase ของโปรเจกต์กบ ===
 firebase.initializeApp({
   apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
   authDomain: "onerev-dev.firebaseapp.com",
@@ -17,24 +17,52 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/**
- * รับข้อความตอนอยู่เบื้องหลัง (แอปปิด/พื้นหลัง)
- * ถ้า server ส่ง payload ที่มี notification.title/body จะถูกแสดงอัตโนมัติบน Android ส่วนใหญ่
- * แต่เพื่อความชัวร์ เรา handle เองด้วย:
- */
+// คำนวณ base URL ตาม scope ของ SW (เพื่อให้พาธถูกบน GitHub Pages)
+const BASE = self.registration.scope; // ex: https://kobkanin.github.io/rails-poc-twa/
+const iconUrl = new URL("icon-192.png", BASE).toString();
+
+// === 2) รับข้อความตอนเบื้องหลัง ===
 messaging.onBackgroundMessage((payload) => {
   const title = payload.notification?.title || "Notification";
   const options = {
     body: payload.notification?.body || "",
-    icon: "/icon-192.png",
-    data: payload.data || {},
+    icon: iconUrl, // ใช้ไอคอนตาม scope
+    data: {
+      // เก็บข้อมูลไว้ใช้ตอนคลิก
+      ...payload.data,
+      // รองรับกรณี server ส่ง click_action หรือถ้าไม่ส่งให้ fallback ไป index ของโปรเจกต์
+      click_action: payload.data?.click_action || new URL("", BASE).toString(),
+    },
   };
   self.registration.showNotification(title, options);
 });
 
-// จัดการเมื่อผู้ใช้กดแจ้งเตือน
+// === 3) เปิดหน้า/โฟกัสแท็บเมื่อผู้ใช้คลิกแจ้งเตือน ===
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification?.data?.click_action || "/";
-  event.waitUntil(clients.openWindow(url));
+  const targetUrl =
+    event.notification?.data?.click_action || new URL("", BASE).toString();
+
+  event.waitUntil(
+    (async () => {
+      const allClients = await clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      // ถ้ามีแท็บที่เปิด URL เดิมแล้ว ให้โฟกัสแท็บนั้น
+      for (const client of allClients) {
+        if (client.url.startsWith(targetUrl) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // ไม่มีก็เปิดใหม่
+      return clients.openWindow(targetUrl);
+    })()
+  );
+});
+
+// (ออปชัน) ช่วยให้ SW เวอร์ชันใหม่ takeover ได้ไวขึ้นเวลาอัปเดต
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
 });

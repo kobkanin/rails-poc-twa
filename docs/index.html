@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rails POC (Static PWA)</title>
 
-    <!-- Firebase -->
+    <!-- Firebase (compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
 
@@ -118,6 +118,7 @@
       </div>
     </div>
 
+    <!-- ==== Firebase Messaging Setup ==== -->
     <script>
       // ✅ ป้องกันรันจาก file://
       function isSecureContextForSW() {
@@ -128,7 +129,7 @@
         );
       }
 
-      // ✅ Firebase init
+      // ✅ Firebase init (โปรเจกต์ของกบ)
       const firebaseConfig = {
         apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
         authDomain: "onerev-dev.firebaseapp.com",
@@ -138,6 +139,10 @@
       };
       firebase.initializeApp(firebaseConfig);
       const messaging = firebase.messaging();
+
+      // ✅ ให้รองรับทั้ง localhost และ GitHub Pages repo page
+      const parts = location.pathname.split("/").filter(Boolean);
+      const basePath = parts.length ? `/${parts[0]}/` : "/";
 
       async function ensureNotificationPermission() {
         if (!("Notification" in window)) {
@@ -160,27 +165,27 @@
           throw new Error("ต้องรันผ่าน HTTPS หรือ http://localhost");
         }
 
-        // ✅ ใช้ path relative (รองรับ basepath /rails-poc-twa/)
-        const [pwaReg, fcmReg] = await Promise.all([
-          navigator.serviceWorker.register("./service-worker.js", {
-            scope: "./",
-          }),
-          navigator.serviceWorker.register("./firebase-messaging-sw.js", {
-            scope: "./",
-          }),
-        ]);
+        // สมัครเฉพาะ SW ของ Firebase Messaging และระบุ scope ให้ตรงกับ repo page
+        const fcmReg = await navigator.serviceWorker.register(
+          `${basePath}firebase-messaging-sw.js?v=${Date.now()}`,
+          { scope: basePath }
+        );
 
-        if (messaging.useServiceWorker) messaging.useServiceWorker(fcmReg);
-        await navigator.serviceWorker.ready;
+        if (messaging.useServiceWorker) messaging.useServiceWorker(fcmReg); // compat API
         return fcmReg;
       }
 
       async function fetchFcmToken() {
         const vapidKey =
-          "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg";
-        return await messaging.getToken({ vapidKey });
+          "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg"; // <-- ของกบ
+        const token = await messaging.getToken({ vapidKey });
+        if (!token) {
+          throw new Error("ไม่ได้รับ token (ตรวจ VAPID key / permission / SW)");
+        }
+        return token;
       }
 
+      // รับข้อความขณะ foreground
       messaging.onMessage((payload) => {
         console.log("Foreground message:", payload);
         const { title, body } = payload.notification || {};

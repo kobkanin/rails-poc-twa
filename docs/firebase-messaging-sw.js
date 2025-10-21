@@ -6,7 +6,7 @@ importScripts(
   "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"
 );
 
-// === 1) Init Firebase ของโปรเจกต์กบ ===
+/** 1) Init Firebase ของโปรเจกต์ */
 firebase.initializeApp({
   apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
   authDomain: "onerev-dev.firebaseapp.com",
@@ -17,31 +17,40 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// คำนวณ base URL ตาม scope ของ SW (เพื่อให้พาธถูกบน GitHub Pages)
-const BASE = self.registration.scope; // ex: https://kobkanin.github.io/rails-poc-twa/
-const iconUrl = new URL("icon-192.png", BASE).toString();
+/** 2) คำนวณ base URL ตาม scope ของ SW (รองรับ GitHub Pages /rails-poc-twa/) */
+const BASE = self.registration.scope; // e.g. https://kobkanin.github.io/rails-poc-twa/
+const toUrl = (p) => new URL(p, BASE).toString();
+const ICON_URL = toUrl("icon-192.png");
+const HOME_URL = toUrl("./");
 
-// === 2) รับข้อความตอนเบื้องหลัง ===
+/** 3) รับข้อความตอนเบื้องหลัง (background) */
 messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "Notification";
+  // รองรับทั้งกรณีส่ง notification-object และ data-only (title/body อยู่ใน data)
+  const n = payload.notification || {};
+  const d = payload.data || {};
+
+  const title = n.title || d.title || "Notification";
+  const body = n.body || d.body || "";
+
+  const clickAction = d.click_action || n.click_action || HOME_URL;
+
   const options = {
-    body: payload.notification?.body || "",
-    icon: iconUrl, // ใช้ไอคอนตาม scope
+    body,
+    icon: ICON_URL,
     data: {
-      // เก็บข้อมูลไว้ใช้ตอนคลิก
-      ...payload.data,
-      // รองรับกรณี server ส่ง click_action หรือถ้าไม่ส่งให้ fallback ไป index ของโปรเจกต์
-      click_action: payload.data?.click_action || new URL("", BASE).toString(),
+      ...d,
+      click_action: clickAction,
     },
   };
+
   self.registration.showNotification(title, options);
 });
 
-// === 3) เปิดหน้า/โฟกัสแท็บเมื่อผู้ใช้คลิกแจ้งเตือน ===
+/** 4) เปิดหน้า/โฟกัสแท็บเมื่อผู้ใช้คลิกแจ้งเตือน */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl =
-    event.notification?.data?.click_action || new URL("", BASE).toString();
+
+  const targetUrl = event.notification?.data?.click_action || HOME_URL;
 
   event.waitUntil(
     (async () => {
@@ -49,19 +58,18 @@ self.addEventListener("notificationclick", (event) => {
         type: "window",
         includeUncontrolled: true,
       });
-      // ถ้ามีแท็บที่เปิด URL เดิมแล้ว ให้โฟกัสแท็บนั้น
       for (const client of allClients) {
+        // ใช้ startsWith เพื่อครอบกรณีมี query/hash
         if (client.url.startsWith(targetUrl) && "focus" in client) {
           return client.focus();
         }
       }
-      // ไม่มีก็เปิดใหม่
-      return clients.openWindow(targetUrl);
+      if (clients.openWindow) return clients.openWindow(targetUrl);
     })()
   );
 });
 
-// (ออปชัน) ช่วยให้ SW เวอร์ชันใหม่ takeover ได้ไวขึ้นเวลาอัปเดต
+/** 5) ให้ SW เวอร์ชันใหม่ takeover ไว */
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());

@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Rails POC (Static PWA)</title>
 
-    <!-- Firebase (compat) -->
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
-
-    <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->
+    <!-- PWA Config -->
     <link rel="manifest" href="./manifest.json" />
     <meta name="theme-color" content="#0ea5e9" />
 
@@ -118,75 +114,70 @@
       </div>
     </div>
 
-    <!-- ==== Firebase Messaging Setup ==== -->
-    <script>
-      // ✅ ป้องกันรันจาก file://
-      function isSecureContextForSW() {
-        return (
-          location.protocol === "https:" ||
-          location.hostname === "localhost" ||
-          location.hostname === "127.0.0.1"
-        );
-      }
+    <!-- ==== Firebase Modular SDK ==== -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+      import {
+        getMessaging,
+        getToken,
+        onMessage,
+      } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging.js";
 
-      // ✅ Firebase init (โปรเจกต์ของกบ)
-      const firebaseConfig = {
+      // ✅ Init Firebase
+      const app = initializeApp({
         apiKey: "AIzaSyBEYRc3lWgrhf3JuzBVOI33sdelL53xuuk",
         authDomain: "onerev-dev.firebaseapp.com",
         projectId: "onerev-dev",
         messagingSenderId: "782528078431",
         appId: "1:782528078431:web:ccd3e92370c8e316c531ea",
-      };
-      firebase.initializeApp(firebaseConfig);
-      const messaging = firebase.messaging();
+      });
 
-      // ✅ ให้รองรับทั้ง localhost และ GitHub Pages repo page
+      const messaging = getMessaging(app);
+
+      // ✅ คำนวณ basePath สำหรับ GitHub Pages repo (/rails-poc-twa/)
       const parts = location.pathname.split("/").filter(Boolean);
       const basePath = parts.length ? `/${parts[0]}/` : "/";
 
-      async function ensureNotificationPermission() {
-        if (!("Notification" in window)) {
+      // ✅ ขอ permission
+      async function ensurePermission() {
+        if (!("Notification" in window))
           throw new Error("Browser ไม่รองรับ Notification API");
-        }
-        let perm = Notification.permission;
-        if (perm === "default") perm = await Notification.requestPermission();
-        if (perm !== "granted") {
-          throw new Error(
-            "ยังไม่ได้ให้สิทธิ์แจ้งเตือน (permission: " + perm + ")"
-          );
-        }
+        let p = Notification.permission;
+        if (p === "default") p = await Notification.requestPermission();
+        if (p !== "granted")
+          throw new Error("ยังไม่ได้ให้สิทธิ์แจ้งเตือน (" + p + ")");
       }
 
-      async function registerSwForFcm() {
-        if (!("serviceWorker" in navigator)) {
-          throw new Error("Browser ไม่รองรับ Service Worker");
-        }
-        if (!isSecureContextForSW()) {
-          throw new Error("ต้องรันผ่าน HTTPS หรือ http://localhost");
-        }
+      // ✅ สมัคร service worker พร้อม scope ที่ถูกต้อง
+      async function registerFcmSW() {
+        const secure =
+          location.protocol === "https:" ||
+          ["localhost", "127.0.0.1"].includes(location.hostname);
+        if (!secure) throw new Error("ต้องรันผ่าน HTTPS หรือ localhost");
 
-        // สมัครเฉพาะ SW ของ Firebase Messaging และระบุ scope ให้ตรงกับ repo page
-        const fcmReg = await navigator.serviceWorker.register(
+        const registration = await navigator.serviceWorker.register(
           `${basePath}firebase-messaging-sw.js?v=${Date.now()}`,
           { scope: basePath }
         );
-
-        if (messaging.useServiceWorker) messaging.useServiceWorker(fcmReg); // compat API
-        return fcmReg;
+        await navigator.serviceWorker.ready;
+        return registration;
       }
 
-      async function fetchFcmToken() {
+      // ✅ ดึง FCM token โดยส่ง serviceWorkerRegistration
+      async function getFcmTokenWith(registration) {
         const vapidKey =
-          "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg"; // <-- ของกบ
-        const token = await messaging.getToken({ vapidKey });
-        if (!token) {
+          "BFCv-L3AhpTkUvrUyGYLHpSv-CnSI0Nla7XaafAU4TqyXXfCZJrtrzScBMhFFfjryDZsPg0Ew8qKywXfLt_bYIg";
+        const token = await getToken(messaging, {
+          vapidKey,
+          serviceWorkerRegistration: registration,
+        });
+        if (!token)
           throw new Error("ไม่ได้รับ token (ตรวจ VAPID key / permission / SW)");
-        }
         return token;
       }
 
-      // รับข้อความขณะ foreground
-      messaging.onMessage((payload) => {
+      // ✅ ข้อความขณะ foreground
+      onMessage(messaging, (payload) => {
         console.log("Foreground message:", payload);
         const { title, body } = payload.notification || {};
         if (title || body) {
@@ -196,8 +187,8 @@
         }
       });
 
-      // ✅ ปุ่ม FCM
-      (function wireTokenButton() {
+      // ✅ ปุ่มแสดง token
+      (function wireButton() {
         const btn = document.getElementById("btnToken");
         const box = document.getElementById("tokenBox");
         const text = document.getElementById("tokenText");
@@ -208,14 +199,14 @@
           try {
             btn.disabled = true;
             btn.textContent = "Loading...";
-            await ensureNotificationPermission();
-            await registerSwForFcm();
-            const token = await fetchFcmToken();
-            console.log("FCM Token:", token);
-            text.textContent = token || "(no token)";
+            await ensurePermission();
+            const reg = await registerFcmSW();
+            const token = await getFcmTokenWith(reg);
+            console.log("✅ FCM Token:", token);
+            text.textContent = token;
             box.hidden = false;
           } catch (e) {
-            console.error("Get token failed:", e);
+            console.error("❌ Get token failed:", e);
             alert("Get token failed: " + e.message);
           } finally {
             btn.textContent = "Show FCM Token";
@@ -235,6 +226,12 @@
 
         btnHide.addEventListener("click", () => (box.hidden = true));
       })();
+    </script>
+
+    <!-- 🧰 debug ด้วย eruda -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>
+      eruda.init();
     </script>
   </body>
 </html>

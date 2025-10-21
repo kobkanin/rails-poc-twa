@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Rails POC (Static PWA)</title>
+
+    <!-- ใช้ path แบบ relative เพื่อรองรับ basepath /rails-poc-twa/ -->
+    <link rel="manifest" href="./manifest.json" />
+    <meta name="theme-color" content="#0ea5e9" />
+
+    <!-- ตัวอย่างสไตล์เล็กน้อย -->
+    <style>
+      body {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+          Helvetica, Arial, sans-serif;
+        margin: 0;
+        background: #f6f8fa;
+      }
+      .wrap {
+        max-width: 820px;
+        margin: 40px auto;
+        padding: 24px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      }
+      .badge {
+        display: inline-block;
+        background: #e6f4ff;
+        color: #055;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+      }
+      img.icon {
+        width: 64px;
+        height: 64px;
+      }
+      a.btn {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        background: #0ea5e9;
+        color: #fff;
+        text-decoration: none;
+      }
+      code {
+        background: #f3f3f3;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <span class="badge">Static PWA on GitHub Pages</span>
+      <h1>Rails POC — Static Frontend</h1>
+      <div class="row">
+        <img class="icon" src="./icon-192.png" alt="icon" />
+        <p>
+          หน้านี้รันบน GitHub Pages (สแตติก) — ถ้าต้องการ Rails backend จริง
+          ให้โฮสต์ที่ Render/Fly/ฯลฯ แล้วเรียก API จากหน้าเว็บนี้
+        </p>
+      </div>
+
+      <a class="btn" href="./" rel="noopener">Reload</a>
+      <p>
+        Basepath ของเว็บนี้คือ <code>/rails-poc-twa/</code> เพราะเป็น repo page
+      </p>
+
+      <h2>ทดสอบติดตั้งเป็น PWA</h2>
+      <p>
+        เปิดใน Chrome แล้วลอง “Add to Home screen” ได้เลย (เดสก์ท็อปจะเห็น
+        Install app)
+      </p>
+    </div>
+
+    <script>
+      // สมัคร service worker (จำเป็นต้องเสิร์ฟผ่าน HTTPS: GitHub Pages OK)
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./service-worker.js");
+        });
+      }
+    </script>
+  </body>
+</html>

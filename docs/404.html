@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>Redirecting…</title>
+<script>
+  // GitHub Pages จะเสิร์ฟ 404.html เมื่อ path ไม่ตรงไฟล์
+  // เทคนิค: redirect route ใด ๆ กลับไปที่ index พร้อมพารามิเตอร์เดิม
+  const base = "/rails-poc-twa/";
+  const url = new URL(window.location.href);
+  const path = url.pathname.replace(base, "");
+  window.location.replace(
+    base + "?p=" + encodeURIComponent("/" + path + url.search + url.hash)
+  );
+</script>
+<p>Redirecting…</p>

@@ -82,22 +82,6 @@
 
   <body>
     <div class="wrap">
-      <span class="badge">Static PWA on GitHub Pages</span>
-      <h1>Rails POC — Static Frontend</h1>
-
-      <div class="row">
-        <img class="icon" src="./icon-192.png" alt="icon" />
-        <p>
-          หน้านี้รันบน GitHub Pages (สแตติก) — ถ้าต้องการ Rails backend จริง
-          ให้โฮสต์ที่ Render/Fly/ฯลฯ แล้วเรียก API จากหน้าเว็บนี้
-        </p>
-      </div>
-
-      <a class="btn" href="./" rel="noopener">Reload</a>
-      <p>
-        Basepath ของเว็บนี้คือ <code>/rails-poc-twa/</code> เพราะเป็น repo page
-      </p>
-
       <h2>FCM</h2>
       <button id="btnToken" class="btn">Show FCM Token</button>
       <div id="tokenBox" class="token-box" hidden>
@@ -200,9 +184,6 @@
             btn.textContent = "Loading...";
             await ensurePermission();
             const reg = await registerFcmSW();
-            console.log("reg");
-            console.log(reg);
-
             const token = await getFcmTokenWith(reg);
             console.log("✅ FCM Token:", token);
             text.textContent = token;
